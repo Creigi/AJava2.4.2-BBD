@@ -6,8 +6,10 @@ import io.cucumber.java.ru.Когда;
 import io.cucumber.java.ru.Пусть;
 import io.cucumber.java.ru.Тогда;
 import org.junit.jupiter.api.Assertions;
+import ru.netology.data.DataHelper;
 import ru.netology.page.DashboardPage;
 import ru.netology.page.LoginPage;
+import ru.netology.page.TransferPage;
 import ru.netology.page.VerificationPage;
 
 
@@ -15,6 +17,7 @@ public class TemplateSteps {
     private static LoginPage loginPage;
     private static DashboardPage dashboardPage;
     private static VerificationPage verificationPage;
+    private static TransferPage transferPage;
 
     @Пусть("открыта страница с формой авторизации {string}")
     public void openAuthPage(String url) {
@@ -44,18 +47,21 @@ public class TemplateSteps {
     @Пусть("пользователь залогинен с именем {string} и паролем {string}")
     public void loginSuccess(String login, String password) {
         openAuthPage("http://localhost:9999");
-        loginWithNameAndPassword(login, password);
-        setValidCode("12345");
-        verifyDashboardPage();
+        verificationPage = loginPage.validLogin(login, password);
+        dashboardPage = verificationPage.validVerify("12345");
     }
 
-    @Когда("пользователь переводит {int} рублей с карты {int} на свою {int} карту с главной страницы")
-    public void deposit(int amount, int cardPositionFrom, int cardPositionTo) {
-        dashboardPage.depositCard(amount, cardPositionFrom, cardPositionTo);
+    @Когда("пользователь переводит {int} рублей с карты {string} на свою {int} карту с главной страницы")
+    public void deposit(int amount, String cardNumber, int cardPositionTo) {
+        var firstCardInfo = new DataHelper.CardInfo(cardPositionTo, DataHelper.getFirstCardInfo().getCardNumber());
+        var secondCardInfo = new DataHelper.CardInfo(DataHelper.getSecondCardInfo().getCardPosition(), cardNumber);
+        transferPage = dashboardPage.selectCardToDeposit(firstCardInfo);
+        dashboardPage = transferPage.makeValidTransfer(amount, secondCardInfo);
     }
 
     @Тогда("баланс его {int} карты из списка на главной странице должен стать {int} рублей")
     public void getBalance(int cardPosition, int sum) {
-        Assertions.assertEquals(sum, dashboardPage.getBalance(cardPosition));
+        var firstCardInfo = new DataHelper.CardInfo(cardPosition, DataHelper.getFirstCardInfo().getCardNumber());
+        Assertions.assertEquals(sum, dashboardPage.getBalance(firstCardInfo));
     }
 }
